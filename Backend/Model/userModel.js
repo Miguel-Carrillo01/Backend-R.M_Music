@@ -23,6 +23,11 @@ const userSchema = mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "Role", 
     },
+    mongoId: { // Nuevo campo para guardar el _id generado por MongoDB
+        type: String,
+        // required: true,
+        unique: true,
+    },
 },
 {
     timestamps: true,

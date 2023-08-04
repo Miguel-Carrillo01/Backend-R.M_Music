@@ -36,19 +36,23 @@ const registerUser = asyncHandler(async(req, res) => {
 
     // Create User
     const user = await User.create({
-        name,
-        email,
-        cellphone,
-        password: hashedPassword,
-    })
-
+      name,
+      email,
+      cellphone,
+      password: hashedPassword,
+    });
+    
+    // Generar el valor de mongoId después de haber creado el usuario
+    user.mongoId = user._id.toString();
+    
     if(roles){
-        const foundRoles = await Role.find({name: {$in: roles}})
-        user.roles = foundRoles.map(role => role._id)
+      const foundRoles = await Role.find({name: {$in: roles}})
+      user.roles = foundRoles.map(role => role._id)
     } else {
-        const role = await Role.findOne({name: "user"})
-        user.roles = [role._id]
+      const role = await Role.findOne({name: "user"})
+      user.roles = [role._id]
     }
+    await user.save();
 
     if (user) {
         res.status(201).json({
@@ -57,14 +61,13 @@ const registerUser = asyncHandler(async(req, res) => {
             email: user.email,
             cellphone: user.cellphone,
             rol: user.roles,
+            mongoId: user.mongoId,
             token: generateToken(user._id)
         })
     } else {
         res.status(400)
         throw new Error('Invalid user data')
     }
-
-    const savedUser = await user.save()
 
     // console.log(savedUser);
 });
@@ -119,15 +122,14 @@ const registerProducer = asyncHandler(async(req, res) => {
         throw new Error('Invalid user data')
     }
 
-    const savedUser = await userProducer.save()
 
     // console.log(savedUser);
 });
 
 const registerArtist = asyncHandler(async(req, res) => {
-    const { name, email, cellphone, country, songs, nameSong, linkSong, password, roles} = req.body
+    const { name, email, cellphone, profileImg, country, nameSong, linkSong, imgSong, password, roles} = req.body
 
-    if (!name || !email || !cellphone || !password || !country || !songs ) {
+    if (!name || !email || !cellphone || !password || !country ) {
         res.status(400)
         throw new Error('Please add all fields')
     }
@@ -149,10 +151,15 @@ const registerArtist = asyncHandler(async(req, res) => {
         name,
         email,
         cellphone,
+        profileImg,
         country,
         songs: [
-          {nameSong: songs, linkSong}
-        ],
+          {
+              nameSong,
+              linkSong,
+              imgSong
+          }
+      ],
         password: hashedPassword,
     })
 
@@ -170,6 +177,7 @@ const registerArtist = asyncHandler(async(req, res) => {
             name: userArtist.name,
             email: userArtist.email,
             cellphone: userArtist.cellphone,
+            profileImg: userArtist.profileImg,
             country: userArtist.country,
             songs: userArtist.songs,
             rol: userArtist.roles,
@@ -180,7 +188,7 @@ const registerArtist = asyncHandler(async(req, res) => {
         throw new Error('Invalid user data')
     }
 
-    const savedUser = await userArtist.save()
+    // const savedUser = await userArtist.save()
 
     // console.log(savedUser);
 });
@@ -400,13 +408,14 @@ const getUser = asyncHandler(async(req, res) => {
     const user = await User.findOne({ email: email });
 
   if (user) {
-    const { _id, name, email, cellphone, roles} = user;
+    const { _id, name, email, cellphone, roles, mongoId} = user;
     res.status(200).json({
       _id,
       name,
       email,
       cellphone,
       roles,
+      mongoId,
     });
   } else {
     res.status(404).json({ message: 'Usuario no encontrado' });
@@ -436,12 +445,15 @@ const getUserArtist = asyncHandler(async(req, res) => {
   const userArtist = await Artist.findOne({ email: email });
 
 if (userArtist) {
-  const { _id, name, email, cellphone, roles} = userArtist;
+  const { _id, name, email, profileImg, country, songs, cellphone, roles} = userArtist;
   res.status(200).json({
     _id,
     name,
     email,
+    profileImg,
+    country,
     cellphone,
+    songs,
     roles,
   });
 } else {
@@ -449,34 +461,34 @@ if (userArtist) {
 }
 });
 
-// const getAllParking = asyncHandler(async(req, res) => {
-//     UserParking.find().then((data, err) => {
-//         if (err) {
-//           console.error(err);
-//           res.status(500).send('Error de servidor');
-//         } else {
-//           res.json(data);
-//         }
-//       });
-// });
+const getAllArtist = asyncHandler(async(req, res) => {
+    Artist.find().then((data, err) => {
+        if (err) {
+          console.error(err);
+          res.status(500).send('Error de servidor');
+        } else {
+          res.json(data);
+        }
+      });
+});
 
 const updateUser = asyncHandler(async(req, res) => {
-    const { _id } = req.params;
-    const { name, cellphone } = req.body;
+  const { mongoId } = req.params;
+  const { name, cellphone } = req.body;
 
-    try {
-      const user = await User.findOne(_id);
-      if(user){
-        const newInfo ={
-          name: name,
-          cellphone: cellphone,
-        }
-        await User.updateOne({id: _id}, {$set: newInfo})
-        res.status(200).send('Datos Actualizados Correctamente');
+  try {
+    const user = await User.findOne({mongoId});
+    if(user){
+      const newInfo ={
+        name: name,
+        cellphone: cellphone,
       }
-    } catch (err) {
-      res.status(500).json({ err: 'Error al actualizar los datos del usuario' });
+      await User.updateOne({mongoId: mongoId}, {$set: newInfo})
+      res.status(200).send('Datos Actualizados Correctamente');
     }
+  } catch (err) {
+    res.status(500).json({ err: 'Error al actualizar los datos del usuario' });
+  }
 });
 
 const updateUserProducer = asyncHandler(async(req, res) => {
@@ -535,156 +547,10 @@ const search = asyncHandler(async(req, res) => {
     }
 });
 
-const getBooking = asyncHandler(async(req, res) => {
-    try {
-        const bookings = await Booking.find();
-        res.json(bookings);
-      } catch (error) {
-        res.status(500).json({ error: 'Error al obtener las reservas' });
-      }
-});
 
-const getBookingById = asyncHandler(async(req,res) =>{
-    const { idUser } = req.params;
-    const bookings = await Booking.find({ idUser: idUser });
 
-    if (bookings.length > 0) {
-        const bookingData = bookings.map((booking) => {
-          const { name, nitParking, dateStartBooking, dateEndBooking } = booking;
-          return {
-            name,
-            nitParking,
-            dateStartBooking,
-            dateEndBooking,
-          };
-        });
-    
-        res.status(200).json(bookingData);
-      } else {
-        res.status(404).json({ message: 'Este usuario no tiene reservas' });
-      }
-});
 
-const getBookingByNitParking = asyncHandler(async(req,res) =>{
-    const { nitParking } = req.params;
-    const bookings = await Booking.find({ nitParking: nitParking });
 
-    if (bookings.length > 0) {
-        const bookingData = bookings.map((booking) => {
-          const { name, userName, cellphone, nitParking, dateStartBooking, dateEndBooking } = booking;
-          return {
-            name,
-            userName,
-            cellphone,
-            nitParking,
-            dateStartBooking,
-            dateEndBooking,
-          };
-        });
-    
-        res.status(200).json(bookingData);
-      } else {
-        res.status(404).json({ message: 'Este parqueadero no tiene reservas' });
-      }
-});
-
-const createBooking = asyncHandler(async(req, res) => {
-    try {
-        const { name, nitParking, idUser, userName, cellphone, dateStartBooking, duration } = req.body;
-        const formattedStartBooking = moment(dateStartBooking).format('YYYY-MM-DD HH:mm:ss');
-        const formattedEndBooking = moment(dateStartBooking).add(duration, 'minutes').format('YYYY-MM-DD HH:mm:ss');
-
-    // Calcular fecha de finalización sumando la duración
-
-        // Verificacion reserva activa dentro del tiempo
-        const existingBooking = await Booking.findOne({
-          idUser,
-          $or: [
-            {
-              dateStartBooking: { $lte: formattedStartBooking }, // La reserva existente comienza antes o al mismo tiempo que la nueva reserva
-              dateEndBooking: { $gt: formattedStartBooking } // La reserva existente termina después de que comience la nueva reserva
-            },
-            {
-              dateStartBooking: { $lt: formattedEndBooking }, // La reserva existente comienza antes de que termine la nueva reserva
-              dateEndBooking: { $gte: formattedEndBooking } // La reserva existente termina al mismo tiempo o después de que termine la nueva reserva
-            },
-            {
-              dateStartBooking: { $gte: formattedStartBooking }, // La reserva existente comienza después de que comience la nueva reserva
-              dateEndBooking: { $lte: formattedEndBooking } // La reserva existente termina antes de que termine la nueva reserva
-            }
-          ]
-        });
-
-        if (existingBooking) {
-          return res.status(400).json({ error: 'Ya tienes una reserva activa' });
-        }
-
-        const userParking = await UserParking.findOne({ nit: nitParking });
-        if (!userParking) {
-          return res.status(400).json({ error: 'No se encontró el parqueadero' });
-        }
-    
-        let availableSpace;
-        let spaceBooking;
-        for (const space of userParking.capacity) {
-          if (space.state === 'available') {
-            space.state = 'reserved';
-            availableSpace = space;
-            spaceBooking = space.space
-            break;
-          }
-        }
-    
-        if (!availableSpace) {
-          return res.status(400).json({ error: 'No hay espacios disponibles para reservar' });
-        }
-    
-        userParking.save();
-    
-    
-        const booking = new Booking({ name,  nitParking, spaceBooking, idUser, userName, cellphone, dateStartBooking: formattedStartBooking, dateEndBooking: formattedEndBooking });
-        await booking.save();
-    
-        res.json({ mensaje: 'Reserva creada exitosamente' });
-      } catch (error) {
-        res.status(500).json({ error: 'Error al crear la reserva' });
-      }
-});
-
-const getUserSpaces = asyncHandler(async(req,res) =>{
-    const { idUserParking } = req.params;
-    const userParking = await UserParking.findOne({ idUserParking: idUserParking });
-
-    if (userParking) {
-      const userSpaces = userParking.capacity;
-
-      // `userSpaces` es un arreglo que contiene los espacios del usuario de parqueadero
-      res.status(200).json(userSpaces);
-    } else {
-      res.status(404).json({ message: 'Este usuario no tiene Espacios' });
-  }
-});
-
-const updateSpaceById = asyncHandler(async(req, res) => {
-  const { _id, idUserParking } = req.params;
-  const { state } = req.body;
-
-  UserParking.findOneAndUpdate(
-    { idUserParking: idUserParking, 'capacity._id': _id}, // Filtra por el ID del usuario y el ID del espacio
-    { $set: { 'capacity.$.state': state } }, // Actualiza el estado del espacio
-    { new: true }
-  )
-    .then(updatedUser => {
-      if (!updatedUser) {
-        res.status(404).json({ error: 'Usuario o espacio no encontrado' });
-      } else {
-        res.json(updatedUser);
-      }
-    })
-    .catch(error => {
-      res.status(500).json({ error: 'Error al actualizar el estado del espacio' });
-    });
-});
 
 const addSongsToArtist = asyncHandler(async (req, res) => {
   const { _id } = req.params; // Obtener el ID del usuario desde los parámetros de la solicitud
@@ -793,14 +659,8 @@ module.exports = {
     getUserArtist,
     recoverPassword,
     resetUpdatePassword,
-    // getAllParking,
+    getAllArtist,
     search,
-    getBooking,
-    getBookingById,
-    getBookingByNitParking,
-    createBooking,
-    getUserSpaces,
-    updateSpaceById,
     addSongsToArtist,
     updateSongsArtist,
     deleteSongsArtist
