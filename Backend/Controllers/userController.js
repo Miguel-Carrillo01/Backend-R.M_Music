@@ -4,6 +4,7 @@ const asyncHandler = require('express-async-handler');
 const User = require('../Model/userModel');
 const Producer = require('../Model/producerModel');
 const Artist = require('../Model/artistModel');
+const mongoose = require('mongoose');
 const Role = require('../Model/rolesModel');
 const nodemailer = require('nodemailer')
 const crypto = require('crypto');
@@ -498,6 +499,7 @@ const updateUser = asyncHandler(async(req, res) => {
   }
 });
 
+
 const updateUserProducer = asyncHandler(async(req, res) => {
   const { _id } = req.params;
   const { name, cellphone } = req.body;
@@ -518,21 +520,28 @@ const updateUserProducer = asyncHandler(async(req, res) => {
 });
 
 const updateUserArtist = asyncHandler(async(req, res) => {
-  const { _id } = req.params;
-  const { name, cellphone } = req.body;
+  const { email } = req.params;
+  const { name, cellphone, biography } = req.body;
 
   try {
-    const user = await User.findOne(_id);
-    if(user){
+    const artist = await Artist.findOne({email});
+    if(artist){
       const newInfo ={
         name: name,
         cellphone: cellphone,
+        biography: biography
       }
-      await User.updateOne({id: _id}, {$set: newInfo})
+      await Artist.updateOne({email: email}, {$set: newInfo})
       res.status(200).send('Datos Actualizados Correctamente');
     }
   } catch (err) {
-    res.status(500).json({ err: 'Error al actualizar los datos del usuario' });
+    // console.log('Email:', email);
+    // console.log('Name:', name);
+    // console.log('Cellphone:', cellphone);
+    // console.log('Biography:', biography);
+    res.status(500).json({ err: 'Error al actualizar los datos del usuario', });
+    // res.status(500).json({ err: User });
+    // console.log(User);
   }
 });
 
@@ -560,24 +569,25 @@ const search = asyncHandler(async(req, res) => {
 
 
 const addSongsToArtist = asyncHandler(async (req, res) => {
-  const { _id } = req.params; // Obtener el ID del usuario desde los parámetros de la solicitud
-  const { nameSong, linkSong } = req.body; // Obtener los datos del vehículo del cuerpo de la solicitud
+  const { email } = req.params; // Obtener el correo del usuario desde los parámetros de la solicitud
+  const { nameSong, linkSong, imgSong } = req.body; // Obtener los datos de la cancion del cuerpo de la solicitud
 
   try {
-    // Buscar al usuario por su ID
-    const userArtist = await Artist.findOne(_id);
+    // Buscar al usuario por su correo
+    const userArtist = await Artist.findOne({email});
 
     if (!userArtist) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Crear un nuevo objeto de vehículo
+    // Crear un nuevo objeto de cancion
     const newSong = {
       nameSong,
-      linkSong
+      linkSong,
+      imgSong,
     };
 
-    // Agregar el vehículo al arreglo de vehículos del usuario
+    // Agregar el vehículo al arreglo de canciones del usuario
     userArtist.songs.push(newSong);
 
     // Guardar los cambios en el usuario
@@ -623,18 +633,20 @@ const updateSongsArtist = asyncHandler(async (req, res) => {
   }
 });
 
-const deleteSongsArtist = asyncHandler(async (req, res) => {
+const deleteSongArtist = asyncHandler(async (req, res) => {
   try {
-    const { _id, songId } = req.params;
+    const { email, songId } = req.params;
 
-    const userArtist = await Artist.findOne(_id);
+    const userArtist = await Artist.findOne({email});
 
     if (!userArtist) {
       return res.status(404).json({ message: 'Usuario no encontrado' });
     }
 
-    // Filtrar el vehículo a eliminar
-    userArtist.songs = userArtist.songs.filter((songs) => songs._id != songId);
+    const songObjectId = new mongoose.Types.ObjectId(songId);
+
+    // Filtrar las canciones y mantener solo las que no coinciden con songId
+    userArtist.songs = userArtist.songs.filter((song) => !song._id.equals(songObjectId));
 
     await userArtist.save();
 
@@ -642,6 +654,8 @@ const deleteSongsArtist = asyncHandler(async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: 'Error al eliminar la canción' });
     console.log(error);
+    console.log(email);
+    console.log(songId);
   }
 });
 
@@ -670,5 +684,5 @@ module.exports = {
     search,
     addSongsToArtist,
     updateSongsArtist,
-    deleteSongsArtist
+    deleteSongArtist
 }
