@@ -127,9 +127,9 @@ const registerProducer = asyncHandler(async(req, res) => {
 });
 
 const registerArtist = asyncHandler(async(req, res) => {
-    const { name, email, cellphone, profileImg, country, nameSong, linkSong, imgSong, password, roles} = req.body
+    const { name, email, cellphone, profileImg, country, biography, nameSong, linkSong, imgSong, password, roles} = req.body
 
-    if (!name || !email || !cellphone || !password || !country ) {
+    if (!name || !email || !cellphone || !password || !country || !biography ) {
         res.status(400)
         throw new Error('Please add all fields')
     }
@@ -153,6 +153,7 @@ const registerArtist = asyncHandler(async(req, res) => {
         cellphone,
         profileImg,
         country,
+        biography,
         songs: [
           {
               nameSong,
@@ -170,6 +171,7 @@ const registerArtist = asyncHandler(async(req, res) => {
         const role = await Role.findOne({name: "artist"})
         userArtist.roles = [role._id]
     }
+    await userArtist.save();
 
     if (userArtist) {
         res.status(201).json({
@@ -179,6 +181,7 @@ const registerArtist = asyncHandler(async(req, res) => {
             cellphone: userArtist.cellphone,
             profileImg: userArtist.profileImg,
             country: userArtist.country,
+            biography: userArtist.biography,
             songs: userArtist.songs,
             rol: userArtist.roles,
             token: generateToken(userArtist._id)
@@ -230,6 +233,9 @@ const loginUsers = asyncHandler(async(req, res) => {
             name: userArtist.name,
             email: userArtist.email,
             cellphone: userArtist.cellphone,
+            country: userArtist.country,
+            biography: userArtist.biography,
+            songs: userArtist.songs,
             roles: userArtist.roles.name,
             token: generateToken(userArtist._id),
             msg: "Artist Registrado"
@@ -445,13 +451,14 @@ const getUserArtist = asyncHandler(async(req, res) => {
   const userArtist = await Artist.findOne({ email: email });
 
 if (userArtist) {
-  const { _id, name, email, profileImg, country, songs, cellphone, roles} = userArtist;
+  const { _id, name, email, profileImg, country, biography, songs, cellphone, roles} = userArtist;
   res.status(200).json({
     _id,
     name,
     email,
     profileImg,
     country,
+    biography,
     cellphone,
     songs,
     roles,

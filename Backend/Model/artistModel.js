@@ -24,6 +24,15 @@ const artistSchema = mongoose.Schema({
         type: String,
         required: [true, 'Please add a country'],
     },
+    biography: {
+        type: String,
+        required: [true, 'Please add a biography'],
+    },
+    likes: {
+        type: Number,
+        default: 0,
+        // required: [true, 'Please add a country'],
+    },
     songs: {
         type: [{
             nameSong: {
