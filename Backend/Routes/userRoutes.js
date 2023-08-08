@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { registerUser, registerProducer, registerArtist, loginUsers, updateUser, getUser, recoverPassword, resetUpdatePassword, getUserProducer, getUserArtist, getRole, updateUserProducer, updateUserArtist, search, addSongsToArtist, deleteSongArtist, updateSongsArtist, getAllArtist} = require('../Controllers/userController');
+const { registerUser, registerProducer, registerArtist, loginUsers, updateUser, getUser, recoverPassword, resetUpdatePassword, getUserProducer, getUserArtist, getRole, updateUserProducer, updateUserArtist, search, addLikeArtist, addSongsToArtist, deleteSongArtist, updateSongsArtist, getAllArtist} = require('../Controllers/userController');
 // const { protect } = require('../Middleware/authMiddleware');
 
 router.post('/registerUser', registerUser);
@@ -18,7 +18,7 @@ router.post('/meUserProducer', getUserProducer);
 router.post('/meUserArtist', getUserArtist);
 router.get('/getAllArtist', getAllArtist);
 router.post('/search', search);
-
+router.post('/addLikeArtist/:email', addLikeArtist);
 router.post('/addSongs/:email', addSongsToArtist);
 router.patch('/updateSong/:id/:songId', updateSongsArtist);
 router.delete('/deleteSong/:email/:songId', deleteSongArtist);

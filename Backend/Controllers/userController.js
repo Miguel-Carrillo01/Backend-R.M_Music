@@ -108,6 +108,7 @@ const registerProducer = asyncHandler(async(req, res) => {
         const role = await Role.findOne({name: "producer"})
         userProducer.roles = [role._id]
     }
+    await userProducer.save();
 
     if (userProducer) {
         res.status(201).json({
@@ -659,6 +660,31 @@ const deleteSongArtist = asyncHandler(async (req, res) => {
   }
 });
 
+
+const addLikeArtist = async (req, res) => {
+  try {
+    const { email } = req.params;
+
+    const artist = await Artist.findOne({email});
+
+    if (!artist) {
+      return res.status(404).json({ message: 'Artista no encontrado' });
+    }
+
+    // Incrementa el contador de likes del artista
+    artist.likes = artist.likes + 1;
+
+    // Guarda los cambios en la base de datos
+    await artist.save();
+
+    res.status(200).json({ message: 'Like agregado exitosamente' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error al agregar el like' });
+    console.log(error);
+  }
+};
+
+
 // Generate JWT
 const generateToken = (id) => {
     return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -682,6 +708,7 @@ module.exports = {
     resetUpdatePassword,
     getAllArtist,
     search,
+    addLikeArtist,
     addSongsToArtist,
     updateSongsArtist,
     deleteSongArtist
