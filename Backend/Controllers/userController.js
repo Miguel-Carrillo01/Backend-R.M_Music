@@ -285,7 +285,7 @@ const recoverPassword = asyncHandler(async(req, res) => {
                 to: dataUsers.email,
                 // list of receivers
                 subject: "Recuperacion de contraseña R.M Music", // Subject line
-                text: `¿Hola, has olvidado tu contraseña? \n Para ingresar a tu cuenta de nuevo deberas usar esta contraseña: 
+                text: `¿Hola, has olvidado tu contraseña? \n Para recuperar el ritmo de nuevo deberas usar esta contraseña: 
                 Tu nueva contraseña es: ${newPassword} \n\n Cuado ingreses no olvides cambiar tu contraseña`
             }
             
@@ -453,13 +453,14 @@ const getUserArtist = asyncHandler(async(req, res) => {
   const userArtist = await Artist.findOne({ email: email });
 
 if (userArtist) {
-  const { _id, name, email, profileImg, country, biography, songs, cellphone, roles} = userArtist;
+  const { _id, name, email, profileImg, country, likes, biography, songs, cellphone, roles} = userArtist;
   res.status(200).json({
     _id,
     name,
     email,
     profileImg,
     country,
+    likes,
     biography,
     cellphone,
     songs,
